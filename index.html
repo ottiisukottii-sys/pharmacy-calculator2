@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>薬剤販売価格 計算</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f8fafc;
+    --border: #dde3ea;
+    --accent: #1a6eb5;
+    --accent-light: #e8f1fb;
+    --accent2: #0d9488;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --danger: #ef4444;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 40px;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 16px rgba(26,110,181,0.18);
+  }
+
+  header .logo {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.02em; }
+  header p  { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 20px 0;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* 追加フォーム */
+  .add-card {
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .search-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--surface2);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus {
+    border-color: var(--accent);
+    background: white;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 11px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: white;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+    display: none;
+  }
+
+  .dropdown.open { display: block; }
+
+  .dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.12s;
+  }
+
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: var(--accent-light); }
+  .dropdown-item .drug-name { font-weight: 500; }
+  .dropdown-item .drug-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .selected-drug-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  .selected-drug-badge button {
+    background: none; border: none;
+    color: var(--accent); cursor: pointer;
+    font-size: 14px; line-height: 1;
+    padding: 0; margin-left: 2px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    letter-spacing: 0.03em;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    background: var(--surface2);
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: right;
+  }
+
+  .input-group input:focus {
+    border-color: var(--accent);
+    background: white;
+  }
+
+  .btn-add {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-add:hover { background: #155fa0; }
+  .btn-add:active { transform: scale(0.99); }
+  .btn-add:disabled { background: #b0bec5; cursor: not-allowed; }
+
+  /* 薬リスト */
+  .drug-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .drug-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .drug-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .drug-card-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .drug-card-input {
+    width: 72px;
+    padding: 5px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    text-align: right;
+    background: var(--surface2);
+    outline: none;
+  }
+
+  .drug-card-input:focus { border-color: var(--accent); }
+
+  .drug-card-amounts {
+    text-align: right;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .drug-card-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .btn-remove {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+    align-self: start;
+  }
+
+  .btn-remove:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* 合計 */
+  .summary-card {
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: 0 4px 24px rgba(26,110,181,0.25);
+    margin-bottom: 20px;
+  }
+
+  .summary-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 14px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .summary-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .summary-row-label { font-size: 13px; opacity: 0.85; }
+
+  .summary-row-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .summary-row-value.large { font-size: 28px; }
+  .summary-row-value span {
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.75;
+    margin-left: 3px;
+  }
+
+  /* ご参考欄 */
+  .ref-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .ref-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ref-section {
+    margin-bottom: 14px;
+  }
+
+  .ref-section:last-child { margin-bottom: 0; }
+
+  .ref-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .ref-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 12px;
+  }
+
+  .ref-item:last-child { border-bottom: none; }
+
+  .ref-item-label { color: var(--text); flex: 1; line-height: 1.5; }
+
+  .ref-item-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .ref-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 4px 10px;
+    margin-top: 10px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+
+  .ref-link:hover { background: var(--accent-light); }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+  .notice {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #92400e;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 500px) {
+    .summary-row-value.large { font-size: 22px; }
+  }
+
+  @media (min-width: 768px) {
+    header h1 { font-size: 22px; }
+    header p  { font-size: 14px; }
+    .add-card { padding: 28px; }
+    .summary-card { padding: 28px 32px; }
+    .btn-add { font-size: 15px; padding: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">💊</div>
+  <div>
+    <h1>薬剤販売価格 計算</h1>
+    <p>お薬の銘柄と全量を入力してください</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="notice">
+    ⚠️ この計算はあくまで参考値です。正確な金額は薬剤師にご確認ください。
+  </div>
+
+  <!-- 追加フォーム -->
+  <p class="section-label">お薬を追加</p>
+  <div class="add-card">
+
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="薬の銘柄名を入力（例：ロキソプロフェン）" autocomplete="off">
+      <div class="dropdown" id="dropdown"></div>
+    </div>
+
+    <div id="selectedBadge" style="display:none">
+      <div class="selected-drug-badge">
+        <span id="selectedName"></span>
+        <button onclick="clearSelected()">✕</button>
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>全量</label>
+        <input type="number" id="totalAmount" min="0.01" step="0.01" placeholder="例: 30">
+      </div>
+      <div class="input-group" id="unitLabelGroup">
+        <label>単位</label>
+        <input type="text" id="unitLabel" readonly placeholder="－" style="color:var(--text-muted);text-align:left">
+      </div>
+    </div>
+
+    <button class="btn-add" onclick="addDrug()" id="addBtn">＋ このお薬を追加</button>
+  </div>
+
+  <!-- 追加済み薬リスト -->
+  <p class="section-label">追加済みのお薬</p>
+  <div class="drug-list" id="drugList">
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      まだお薬が追加されていません
+    </div>
+  </div>
+
+  <!-- 処方合計 -->
+  <div class="summary-card" id="summaryCard" style="display:none">
+    <div class="summary-title">処方合計</div>
+    <div id="summaryRows"></div>
+  </div>
+
+  <!-- ご参考 -->
+  <p class="section-label" style="margin-top:8px">ご参考</p>
+  <div class="ref-card">
+    <div class="ref-title">💡 諸費用の目安</div>
+
+    <div class="ref-section">
+      <div class="ref-section-title">通常調剤料</div>
+      <div class="ref-item">
+        <span class="ref-item-label">通常調剤料（30日ごと）</span>
+        <span class="ref-item-value">¥1,500</span>
+      </div>
+    </div>
+
+    <div class="ref-section">
+      <div class="ref-section-title">安全キャビネットを使用したハザーダスドラッグの調剤</div>
+      <div class="ref-item">
+        <span class="ref-item-label">特別調剤料（30日ごと）</span>
+        <span class="ref-item-value">¥1,500</span>
+      </div>
+      <div class="ref-item">
+        <span class="ref-item-label">カプセル代</span>
+        <span class="ref-item-value">¥15 / 1カプセル</span>
+      </div>
+      <div class="ref-item">
+        <span class="ref-item-label">送料（関東・東北・信越・北陸・東海）〜</span>
+        <span class="ref-item-value">¥550〜</span>
+      </div>
+      <div class="ref-item" style="border-bottom:none">
+        <span class="ref-item-label">
+          <a href="#" class="ref-link">📄 ハザーダスドラッグ一覧表</a>
+        </span>
+        <span class="ref-item-value"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let drugMaster = [];
+let selectedDrug = null;
+let addedDrugs = [];
+
+fetch('medicines.csv')
+  .then(r => r.text())
+  .then(text => {
+    const lines = text.split('\n');
+    drugMaster = lines.slice(1).map(line => {
+      const cols = line.split(',');
+      return { name: cols[0], unit: cols[1], pricePerUnit: parseFloat(cols[2]) || 0 };
+    }).filter(d => d.name);
+    console.log(`薬品データ読み込み完了: ${drugMaster.length}件`);
+  })
+  .catch(() => console.warn('medicines.csv の読み込みに失敗しました'));
+
+function fmtNum(val) {
+  const n = parseFloat(val);
+  return isNaN(n) ? '0' : parseFloat(n.toFixed(4)).toString();
+}
+
+function fmtPrice(val) {
+  return parseFloat(parseFloat(val).toFixed(1)).toString();
+}
+
+// ====== 検索 ======
+const searchInput = document.getElementById('searchInput');
+const dropdown    = document.getElementById('dropdown');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  if (!q) { dropdown.classList.remove('open'); return; }
+  const hits = drugMaster.filter(d => d.name.includes(q)).slice(0, 10);
+  if (!hits.length) { dropdown.classList.remove('open'); return; }
+  dropdown.innerHTML = hits.map(d => {
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const hl = d.name.replace(new RegExp(escaped, 'g'), `<mark style="background:#dbeafe;color:#1d4ed8;border-radius:2px">${q}</mark>`);
+    return `<div class="dropdown-item" onclick="selectDrug(${drugMaster.indexOf(d)})">
+      <span class="drug-name">${hl}</span>
+      <span class="drug-unit">${d.unit} / ¥${d.pricePerUnit.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+  dropdown.classList.add('open');
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) dropdown.classList.remove('open');
+});
+
+function selectDrug(idx) {
+  selectedDrug = drugMaster[idx];
+  searchInput.value = '';
+  dropdown.classList.remove('open');
+  document.getElementById('selectedName').textContent = selectedDrug.name;
+  document.getElementById('selectedBadge').style.display = 'block';
+  document.getElementById('unitLabel').value = selectedDrug.unit;
+}
+
+function clearSelected() {
+  selectedDrug = null;
+  document.getElementById('selectedBadge').style.display = 'none';
+  document.getElementById('unitLabel').value = '';
+}
+
+// ====== 追加 ======
+function addDrug() {
+  if (!selectedDrug) { alert('銘柄を選択してください'); return; }
+  const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+  if (!totalAmount || totalAmount <= 0) { alert('全量を入力してください'); return; }
+
+  const price = totalAmount * selectedDrug.pricePerUnit;
+
+  addedDrugs.push({
+    name: selectedDrug.name,
+    unit: selectedDrug.unit,
+    pricePerUnit: selectedDrug.pricePerUnit,
+    totalAmount,
+    price
+  });
+
+  // フォームリセット
+  clearSelected();
+  document.getElementById('totalAmount').value = '';
+
+  renderList();
+  renderSummary();
+}
+
+// ====== リスト描画 ======
+function renderList() {
+  const list = document.getElementById('drugList');
+  if (!addedDrugs.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📋</div>まだお薬が追加されていません</div>';
+    return;
+  }
+  list.innerHTML = addedDrugs.map((d, i) => `
+    <div class="drug-card">
+      <div style="flex:1;min-width:0">
+        <div class="drug-card-name">${d.name}</div>
+        <div class="drug-card-inputs">
+          <span style="font-size:10px;color:var(--text-muted);font-weight:600">全量</span>
+          <input type="number" class="drug-card-input" value="${fmtNum(d.totalAmount)}" min="0.01" step="0.01"
+            onchange="updateDrug(${i}, this.value)">
+          <span style="font-size:13px;color:var(--text-muted)">${d.unit}</span>
+        </div>
+      </div>
+      <div class="drug-card-amounts">
+        <div class="drug-card-price">¥${fmtPrice(d.price)}</div>
+      </div>
+      <button class="btn-remove" onclick="removeDrug(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function updateDrug(i, val) {
+  const totalAmount = parseFloat(val) || 0;
+  addedDrugs[i].totalAmount = totalAmount;
+  addedDrugs[i].price = totalAmount * addedDrugs[i].pricePerUnit;
+  renderList();
+  renderSummary();
+}
+
+function removeDrug(i) {
+  addedDrugs.splice(i, 1);
+  renderList();
+  renderSummary();
+}
+
+// ====== 合計描画 ======
+function renderSummary() {
+  const card = document.getElementById('summaryCard');
+  const rows = document.getElementById('summaryRows');
+  if (!addedDrugs.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const totalPrice = addedDrugs.reduce((s, d) => s + d.price, 0);
+
+  rows.innerHTML = addedDrugs.map(d =>
+    `<div class="summary-row">
+      <div class="summary-row-label">${d.name}</div>
+      <div class="summary-row-value" style="font-size:16px">${fmtNum(d.totalAmount)}<span>${d.unit}</span> <span style="opacity:0.6;font-size:12px">/ ¥${fmtPrice(d.price)}</span></div>
+    </div>`
+  ).join('') +
+  `<div class="summary-row" style="margin-top:6px">
+    <div class="summary-row-label" style="font-weight:700;font-size:15px">薬剤販売価格合計</div>
+    <div class="summary-row-value large">¥${Math.round(totalPrice).toLocaleString('ja-JP')}</div>
+  </div>`;
+}
+</script>
+</body>
+</html>
